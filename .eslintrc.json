@@ -10,6 +10,9 @@
     "html"
   ],
   "rules": {
+    "no-console": "off",
+    "comma-dangle": "off",
+    "one-var": "off",
     "brace-style": "off",
     "new-cap": ["error", { "capIsNewExceptions": ["Polymer"] }],
     "no-var": "off",
