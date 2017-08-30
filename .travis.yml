@@ -28,3 +28,10 @@ deploy:
     token: $FIREBASE_TOKEN
     on:
       branch: master
+  - provider: firebase
+    edge: true
+    skip_cleanup: true
+    project: gdgspainsummit
+    token: $FIREBASE_TOKEN
+    on:
+      branch: develop
