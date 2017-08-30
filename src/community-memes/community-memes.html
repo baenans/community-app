@@ -101,7 +101,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             type: Boolean,
             value: false
           }
-        }  
+        };
       }
 
       uploadMeme(e) {
@@ -111,9 +111,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             fileElement = self.$.file,
             file = fileElement._focusableElement.files[0],
             timestamp = -Date.now();
-        if (file.type.match('image.*')){
+        if (file.type.match('image.*')) {
           self.uploadingMeme = true;
-          var fileName = self._guid() + "." + file.name.split(".").slice(-1).pop();
+          var fileName = self._guid() + '.' + file.name.split('.').slice(-1).pop();
           fb.storage().ref('memes/' + fileName).put(file).then(function(snapshot) {
             self.uploadingMeme = false;
             fb.database().ref('memes').push({
@@ -125,21 +125,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               'creation': timestamp,
               'votes': 0
             });
-            fileElement.value = "";
+            fileElement.value = '';
           });
         } else {
-          console.log('that´s not an image!')
+          console.log('that´s not an image!');
         }
       }
 
       _sortMemes(tab) {
-        var self = this;
         if (tab==0) {
           return null;
         } else {
-          return (a,b) => { 
+          return (a, b) => {
             return a.votes > b.votes ? -1 : 1;
-          }
+          };
         }
       }
 

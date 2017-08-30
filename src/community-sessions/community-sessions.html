@@ -138,7 +138,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             db = window.firebase.apps[0].database(),
             userKey = e.model.session.$key,
             myRef = db.ref('saved-sessions/'+ self.uid);
-        
+
         let sessionSaved = self._findSavedSessions(userKey);
 
         if (sessionSaved) {
@@ -148,12 +148,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         }
 
         self.$['session-list'].render();
-
       }
 
       _findSavedSessions(key) {
         var self = this;
-        return self.savedSessions.find(o => {
+        return self.savedSessions.find((o) => {
           return o.$val == key;
         });
       }
@@ -161,7 +160,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       _getIcon(key, savedSessions) {
         var self = this,
             session = self._findSavedSessions(key);
-        return session?"icons:star":"icons:star-border";
+        return session?'icons:star':'icons:star-border';
       }
 
       _filterSessions(tab) {
@@ -169,7 +168,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         if (tab==0) {
           return null;
         } else {
-          return p => { return self._findSavedSessions(p.$key) != undefined }
+          return (p) => { return self._findSavedSessions(p.$key) != undefined; };
         }
       }
     }
