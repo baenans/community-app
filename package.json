@@ -9,7 +9,7 @@
     "polymer-cli": "^1.4.1"
   },
   "scripts": {
-    "build": "polymer build",
+    "build": "npm install --prefix ./functions functions && polymer build",
     "lint": "npm run lint:javascript && polymer lint",
     "lint:javascript": "eslint . --ext js,html --ignore-path .gitignore",
     "test": "polymer test",
