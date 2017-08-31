@@ -195,11 +195,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
             firebase.apps[0].database().ref('users/' + uid).once('value')
               .then(function(snapshot) {
-                if (snapshot.val()==null){
+                if (snapshot.val() === null){  // only executed first time
                   firebase.apps[0].database().ref('users/' + uid).set({
-                    'displayName': displayName,
-                    'photo': photo,
-                    'email': email
+                    displayName,
+                    photo,
+                    email
                   });
                   self._goToSettings();
                 }
