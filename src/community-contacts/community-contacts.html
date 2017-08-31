@@ -9,9 +9,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 -->
 
 <link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../../bower_components/app-storage/app-indexeddb-mirror/app-indexeddb-mirror.html">
 <link rel="import" href="../../bower_components/app-route/app-route.html">
 <link rel="import" href="../../bower_components/iron-pages/iron-pages.html">
 <link rel="import" href="../../bower_components/paper-tabs/paper-tabs.html">
+<link rel="import" href="../../bower_components/paper-toast/paper-toast.html">
 <link rel="import" href="../../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../../bower_components/polymerfire/polymerfire.html">
 
@@ -74,18 +76,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       active="{{detailActive}}"
       data="{{routeData}}"></app-route>
 
+    <app-indexeddb-mirror
+      session="[[uid]]"
+      key="users"
+      data="{{liveUsers}}"
+      persisted-data="{{users}}"
+      online="{{online}}">
+    </app-indexeddb-mirror>
+
     <firebase-query
       app-name="community"
       path="users"
-      data="{{users}}"
-      on-data-changed="_usersChanged">
+      data="{{liveUsers}}">
     </firebase-query>
 
     <firebase-query
       app-name="community"
       path="known-users/[[uid]]"
-      data="{{knownUsers}}"
-      on-data-changed="_usersChanged">
+      data="{{knownUsers}}">
     </firebase-query>
 
     <iron-pages
@@ -94,17 +102,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       fallback-selection="list">
       <div name="list">
         <paper-tabs selected="{{listTab}}">
+          <paper-tab>TODOS</paper-tab>
           <paper-tab>CONOCIDOS</paper-tab>
-          <paper-tab>POR CONOCER</paper-tab>
         </paper-tabs>
-        <template id="users-list" is="dom-repeat" items="{{users}}" as="user" filter="{{_filterKnownContacts(listTab)}}">
+        <template id="users-list" is="dom-repeat" items="{{users}}" as="user" filter="{{_filterKnownContacts(listTab)}}" sort="_sortKnownContacts">
           <div class="card-row" on-click="_showDetail">
             <img src="[[user.photo]]?sz=60">
             <div class="details">
               <div class="name">[[user.displayName]]</div>
               <div class="community">[[user.community]]</div>
             </div>
-            <paper-icon-button icon="icons:remove-circle" on-tap="_markAsKnown"></paper-icon-button>
+            <paper-icon-button icon="{{_getIcon(user.$key, knownUsers.length)}}" on-tap="_markAsKnown"></paper-icon-button>
           </div>
         </template>
       </div>
@@ -121,6 +129,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       </div>
     </iron-pages>
 
+    <paper-toast text="Sin conexión: algunos cambios podrían no reflejarse"  duration="4" opened$="[[!online]]"></paper-toast>
+
   </template>
 
   <script>
@@ -132,15 +142,37 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             type: Number,
             value: 0
           },
-          userDetail: Object
+          userDetail: Object,
+          online: Boolean
         };
       }
 
       static get observers() {
         return [
           '_detailActiveChanged(detailActive)',
-          '_routeDataChanged(routeData.id)'
+          '_routeDataChanged(routeData.id)',
+          '_usersChanged(liveUsers.length, knownUsers.length)',
+          '_updateKnownUsers(knownUsers.splices)'
         ]
+      }
+
+      connectedCallback() {
+        super.connectedCallback();
+        var self = this;
+        if (!self.online && localStorage) {
+          let offlineKnownUsers = JSON.parse(localStorage.getItem("knownUsers"));
+          if (offlineKnownUsers) {
+            self.set('knownUsers', offlineKnownUsers);
+          }
+        }
+      }
+
+      _updateKnownUsers(knownUsers) {
+        var self = this;
+        if (self.knownUsers && self.knownUsers.length > 0 && localStorage) {
+          localStorage.setItem("knownUsers", JSON.stringify(self.knownUsers));
+        }
+        self.$['users-list'].render();
       }
 
       _detailActiveChanged(active) {
@@ -149,6 +181,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _routeDataChanged(id) {
         var self = this;
+        if (!self.users)
+          return undefined;
+
         if (!self.userDetail || self.userDetail.$key != id) {
           let u = self.users.find(o => {
             return o.$key == id
@@ -159,7 +194,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _usersChanged() {
         // todo: debounce this
-        //console.log("users changed");
         var self = this;
         self.$['users-list'].render();
         if (self.page == "detail"){
@@ -167,7 +201,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         }
       }
 
-      _findKnownContacts(key) {
+      _findKnownUsers(key) {
         var self = this;
         return self.knownUsers.find(o => {
           return o.$val == key;
@@ -176,11 +210,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _filterKnownContacts(tab) {
         var self = this;
-        if (tab==0) {
-          return p => { return self._findKnownContacts(p.$key) != undefined }
+        if (tab === 0) {
+          return null;
         } else {
-          return p => { return self._findKnownContacts(p.$key) == undefined }
+          return p => { return self._findKnownUsers(p.$key) != undefined };
         }
+      }
+
+      _sortKnownContacts(a, b) {
+        var self = this,
+            knownUser = self._findKnownUsers(a.$key);
+        return knownUser? 1 : -1;
+      }
+
+
+      _getIcon(key, knownUsers) {
+        var self = this,
+            knownUser = self._findKnownUsers(key);
+        return knownUser?"icons:remove-circle":"icons:add-circle";
       }
 
       _markAsKnown(e) {
@@ -190,7 +237,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             userKey = e.model.user.$key,
             myRef = db.ref('known-users/'+ self.uid);
         
-        let userIsKnown = self._findKnownContacts(userKey);
+        let userIsKnown = self._findKnownUsers(userKey);
 
         if (userIsKnown) {
           myRef.child(userIsKnown.$key).remove();
