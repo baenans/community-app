@@ -11,6 +11,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../../bower_components/app-storage/app-indexeddb-mirror/app-indexeddb-mirror.html">
 <link rel="import" href="../../bower_components/paper-tabs/paper-tabs.html">
+<link rel="import" href="../../bower_components/paper-toast/paper-toast.html">
 <link rel="import" href="../../bower_components/paper-card/paper-card.html">
 <link rel="import" href="../../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../../bower_components/iron-icon/iron-icon.html">
@@ -67,6 +68,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       paper-icon-button {
         color: #ffc107;
       }
+
+      paper-toast {
+        text-align: left;
+        z-index: 9999;
+      }
+
     </style>
 
     <firebase-query
@@ -79,7 +86,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       session="[[uid]]"
       key="sessions"
       data="{{liveSessions}}"
-      persisted-data="{{sessions}}">
+      persisted-data="{{sessions}}"
+      online="{{online}}">
     </app-indexeddb-mirror>
 
     <firebase-query
@@ -117,11 +125,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           [[session.kind]] – [[session.date]]
         </div>
         <div class="enrolment">
-          <paper-icon-button icon="{{_getIcon(session.$key, savedSessions.*)}}" on-tap="_saveSession"></paper-icon-button>
+          <paper-icon-button 
+            icon="{{_getIcon(session.$key, savedSessions.*)}}" 
+            on-tap="_saveSession"></paper-icon-button>
         </div>
       </div>
     </paper-card>
     </template>
+
+    <paper-toast text="Sin conexión: algunos cambios podrían no reflejarse"  duration="4" opened$="[[!online]]"></paper-toast>
     
   </template>
 
@@ -136,8 +148,34 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             value: 0
           },
           sessions: Array,
-          savedSessions: Array
+          savedSessions: Array,
+          online: Boolean
         };
+      }
+
+      static get observers() {
+        return [
+          '_updateSavedSessions(savedSessions.splices)'
+        ];
+      }
+
+      _updateSavedSessions(savedSessions) {
+        var self = this;
+        if (self.savedSessions && self.savedSessions.length > 0 && localStorage) {
+          localStorage.setItem("savedSessions", JSON.stringify(self.savedSessions));
+        }
+        self.$['session-list'].render();
+      }
+
+      connectedCallback() {
+        super.connectedCallback();
+        var self = this;
+        if (!self.online && localStorage) {
+          let offlineSavedSessions = JSON.parse(localStorage.getItem("savedSessions"));
+          if (offlineSavedSessions) {
+            self.set('savedSessions', offlineSavedSessions);
+          }
+        }
       }
 
       _saveSession(e) {
@@ -145,7 +183,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         var self = this,
             db = window.firebase.apps[0].database(),
             userKey = e.model.session.$key,
-            myRef = db.ref('saved-sessions/'+ self.uid);
+            myRef = db.ref('saved-sessions/' + self.uid);
         
         let sessionSaved = self._findSavedSessions(userKey);
 
@@ -174,10 +212,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _filterSessions(tab) {
         var self = this;
-        if (tab==0) {
+        if (tab === 0) {
           return null;
         } else {
-          return p => { return self._findSavedSessions(p.$key) != undefined }
+          return session => { return self._findSavedSessions(session.$key) != undefined }
         }
       }
     }
